@@ -1,0 +1,102 @@
+<html>
+<head>
+<title>Korean conjugator</title>
+<meta charset="utf-8">
+
+<style>
+
+#verbForms {
+display: block;
+position: relative;
+background-color: #EEFFFF;
+font-size: 36pt;
+left: 20px;
+width: 80%;
+line-height: 10px;
+}
+
+</style>
+
+</head>
+
+<script>
+
+function checkForEnter(event) {
+    if (event.keyCode == 13) {
+        doOnEnter();
+    }
+}
+
+function doOnEnter() {
+    var harmonyVowel;
+    var simpleConjSyllable;
+    var simpleForm;
+    var batchimSituation;
+
+    var userInput = document.getElementById("userVerbInput").value;
+    // this is just the verb without '다', e.g. 가르치:
+    root = userInput.slice(0,-1);
+    // this is the last syllable of the root, e.g. 치 in 가르치다:
+    rootEnd = root.slice(-1);
+    // this realigns the numbers so that we start with 가 = 0:
+    rootEndCodeFromZ = rootEnd.charCodeAt() - 44032;
+    // consVowelCode is a number that represents the initial consonant and vowel part of a syllable block, ignoring any batchim. So 가, 갑, 갉, 갛 all have the same number
+    var consVowelCode = Math.floor(rootEndCodeFromZ/28);
+    // 0: 가, 1: 개, 2: 갸, 3: 걔, 4: 거, 5: 게...20: 기
+    // 21: 까, 22: 깨...41: 끼
+    // 42: 나...62: 니
+    // 63: 다
+    // initials: g, kk, n, d, tt, r, m, b, pp, s, ss, 0, j, jj, ch, k, t, p, h
+    // vowels: a, ae, ya, yae, eo, e, yeo, ye, o, wa, wae, oe, yo, u, wo, we, wi, yu, eu, ui, i
+    // batchim: 0, g, kk, gs, n, nj, nh, d, r, rg, rm, rb, rs, rt, rp, rh, m, b, bs, s, ss, ng, j, ch, k, t, p, h (28 total)
+    // a-vowels: a, o
+    // eo-vowels: AE, eo, yeo, u, we, wi, eu, i
+    // undetermined: (ya, yae, e, ye) wa, wae, oe, yo, wo, yu, ui
+    if (consVowelCode % 21 == 0 || consVowelCode % 21 == 2 ||consVowelCode % 21 == 8) {
+        harmonyVowel = "a" }
+    else {
+        harmonyVowel = "eo" }
+
+    switch(rootEndCodeFromZ % 28) {  // possible irregulars: d, b, s, h
+        case 0: // watch out for "reu" and "hada" verbs
+            batchimSituation = "no batchim";
+            break;
+        default:    // we'll reserve default for batchim present, no irregularities
+            batchimSituation = "present regular";
+            break;
+    }
+
+    if (harmonyVowel == "a") {
+        simpleConjSyllable = "아";
+    }
+    else {
+        simpleConjSyllable = "어";
+    }
+
+    if (batchimSituation == "present regular") {
+        simpleForm = root+simpleConjSyllable;
+    }
+    // taking root.slice is necessary because the last syllable of the root changes
+    else if (rootEnd == "하") {
+        simpleForm = root.slice(0,-1)+"해"; }
+
+
+    document.getElementById("rootDisplay").innerHTML = root;
+    impersonal = root + "는다";
+    simple = userInput.slice(-2,-1);
+    formal = root + "습니다";
+    document.getElementById("basic3Display").innerHTML = impersonal + "&nbsp;&nbsp;&nbsp;" + simpleForm + "&nbsp;&nbsp;&nbsp;" + formal;
+}
+
+</script>
+
+<body>
+
+<input type="text" id="userVerbInput" onkeypress="checkForEnter(event)" autofocus>
+<div id="verbForms">
+<p id="rootDisplay"></p>
+<p id="basic3Display"></p>
+</div>
+
+</body>
+</html>
