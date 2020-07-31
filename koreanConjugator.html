@@ -28,8 +28,11 @@ function checkForEnter(event) {
 }
 
 function doOnEnter() {
+    var consVowelCode;
+    var vowelCode;
     var harmonyVowel;
     var simpleConjSyllable;
+    var impersonalForm;
     var simpleForm;
     var batchimSituation;
 
@@ -40,29 +43,61 @@ function doOnEnter() {
     rootEnd = root.slice(-1);
     // this realigns the numbers so that we start with 가 = 0:
     rootEndCodeFromZ = rootEnd.charCodeAt() - 44032;
-    // consVowelCode is a number that represents the initial consonant and vowel part of a syllable block, ignoring any batchim. So 가, 갑, 갉, 갛 all have the same number
-    var consVowelCode = Math.floor(rootEndCodeFromZ/28);
+    // (rootEndCodeFromZ % 28) yields a number from 0 to 27 that stands in for the batchim, in the order:
+    // batchim: 0, g, kk, gs, n, nj, nh, d, r, rg, rm, rb, rs, rt, rp, rh, m, b, bs, s, ss, ng, j, ch, k, t, p, h
+    // consVowelCode is a number that represents the initial consonant and vowel part of a syllable block, ignoring any batchim. So 가, 갑, 갉, 갛 all have the same number, 0, representing 가.
+    consVowelCode = Math.floor(rootEndCodeFromZ/28);
+    vowelCode = consVowelCode % 21;
     // 0: 가, 1: 개, 2: 갸, 3: 걔, 4: 거, 5: 게...20: 기
     // 21: 까, 22: 깨...41: 끼
     // 42: 나...62: 니
     // 63: 다
     // initials: g, kk, n, d, tt, r, m, b, pp, s, ss, 0, j, jj, ch, k, t, p, h
     // vowels: a, ae, ya, yae, eo, e, yeo, ye, o, wa, wae, oe, yo, u, wo, we, wi, yu, eu, ui, i
-    // batchim: 0, g, kk, gs, n, nj, nh, d, r, rg, rm, rb, rs, rt, rp, rh, m, b, bs, s, ss, ng, j, ch, k, t, p, h (28 total)
     // a-vowels: a, o
-    // eo-vowels: AE, eo, yeo, u, we, wi, eu, i
-    // undetermined: (ya, yae, e, ye) wa, wae, oe, yo, wo, yu, ui
-    if (consVowelCode % 21 == 0 || consVowelCode % 21 == 2 ||consVowelCode % 21 == 8) {
+    // eo-vowels: eo, yeo, u, we, wi, eu, ui, i
+    // trick vowels: ae, e, oe
+    // undetermined: (>ya<, yae, ye) wa, wae, >yo<, >wo<, >yu<
+    //
+    // 0 가다: 가                no change
+    // 1 보내다: 보내...매다: 매   no change
+    // 2 yada (DNE)
+    // 3 yaeda (DNE)
+    // 4 건너다: 건너어...서다: 서어     add -eo
+    // 5 떼다: 떼                no change
+    // 6 켜다: 켜어...펴다: 펴어      add -eo
+    // 7 yeda (DNE)
+    // 8 오다: 와                compoundify
+    // 9 wada (DNE)
+    // 10 waeda (DNE)
+    // 11 괴다: 괘...되다: 돼      compoundify
+    // 12 yoda (DNE)
+    // 13 나누다: 나누어...주다: 주어...지우다: 지워...싸우다: 싸워    add -eo / compoundify********
+    // 14 woda (DNE)
+    // 15 꿰다: 꿰어                       add -eo
+    // 16 쉬다: 쉬어...바뀌다: 바뀌어        add -eo
+    // 17 yuda (DNE)
+    // 18 잠그다: 잠가...쓰다: 써          change entirely********************
+    // 19 띄다: 띄어                      add -eo
+    // 20 달리다: 달려...던지다: 던져        compoundify
+    if (vowelCode % 21 == 0 || vowelCode % 21 == 2 || vowelCode % 21 == 8) {
         harmonyVowel = "a" }
     else {
         harmonyVowel = "eo" }
 
     switch(rootEndCodeFromZ % 28) {  // possible irregulars: d, b, s, h
-        case 0: // watch out for "reu" and "hada" verbs
+        case 0: // case 0 is vowel-final. Watch out for "reu" and "hada" verbs
             batchimSituation = "no batchim";
             break;
-        default:    // we'll reserve default for batchim present, no irregularities
-            batchimSituation = "present regular";
+        case 7:     // -d
+        case 8:     // -l
+        case 17:    // -b
+        case 19:    // -s
+        case 27:    // -h
+            batchimSituation = "irregular";
+            break;            
+        default:    // we'll reserve default for batchim present, no irregularities (-g, -kk, -gs, -n, -nj, -nh, -lg, -lm, -lb, -ls, -lt, -lp, -rh, -m, -bs, -ss, -ng, -j, -ch, -k, -t, -p)
+            batchimSituation = "regular";
             break;
     }
 
@@ -72,22 +107,100 @@ function doOnEnter() {
     else {
         simpleConjSyllable = "어";
     }
-
-    if (batchimSituation == "present regular") {
-        simpleForm = root+simpleConjSyllable;
+    
+    
+    // for impersonal form:
+    
+    if (batchimSituation == "regular" || rootEndCodeFromZ % 28 == 7 || rootEndCodeFromZ % 28 == 17 || rootEndCodeFromZ % 28 == 19 || rootEndCodeFromZ % 28 == 27) {
+        impersonalForm = root+"는다"; }
+    else if (rootEndCodeFromZ % 28 == 8) {
+        impersonalForm = root.slice(0,-1) + String.fromCharCode(rootEndCodeFromZ+44032-4) + "다"; }
+    else if (rootEnd == "하") { // taking root.slice is necessary because the last syllable of the root changes
+        impersonalForm = root.slice(0,-1)+"한다"; } 
+    else if (rootEnd == "르") {
+        impersonalForm = root.slice(0,-1)+"른다"; } 
+    else if (rootEndCodeFromZ % 28 == 0) {     // most vowel-final roots
+        // add 4 to the root end code to get the corresponding n-batchim syllable block
+        impersonalForm = root.slice(0,-1) + String.fromCharCode(rootEndCodeFromZ+44032+4) + "다";
     }
-    // taking root.slice is necessary because the last syllable of the root changes
-    else if (rootEnd == "하") {
-        simpleForm = root.slice(0,-1)+"해"; }
+    
+    
+    
+    // for simple form:
+
+    if (batchimSituation == "regular") {
+        simpleForm = root+simpleConjSyllable; }
+    else if (rootEnd == "하") { // taking root.slice is necessary because the last syllable of the root changes
+        simpleForm = root.slice(0,-1)+"해"; } 
+    else if (rootEnd == "르") {
+        simpleForm = "N/A"; }
+    else if (rootEndCodeFromZ % 28 == 0) {     // most vowel-final roots
+        // no verbs with vowelCode = 2, 3, 7, 9, 10, 12, 14, or 17 exist
+        if (vowelCode == 0 || vowelCode == 1 || vowelCode == 5) {       // -ada, -aeda, -eda
+            simpleForm = root; }
+        if (vowelCode == 4 || vowelCode == 6 || vowelCode == 15 || vowelCode == 16 || vowelCode == 19) {  // -eoda, -yeoda, -wida, -uida
+            simpleForm = root+"어"; }
+        if (vowelCode == 8) {  // -oda
+            simpleForm = root.slice(0,-1)+String.fromCharCode(rootEndCodeFromZ+44032+28); }
+        if (vowelCode == 11) {  // -oeda
+            simpleForm = root.slice(0,-1)+String.fromCharCode(rootEndCodeFromZ+44032-28); }
+        if (vowelCode == 20) {  // -ida
+            simpleForm = root.slice(0,-1)+String.fromCharCode(rootEndCodeFromZ+44032-28*14); }
+    }
+    
+    
+    
+    
+    
+    // for formal form:
+    
+    if (batchimSituation == "regular") {
+        formalForm = root+simpleConjSyllable; }
+    if (batchimSituation == "irregular") {
+        formalForm = root+simpleConjSyllable; }
+    else if (rootEnd == "하") { // taking root.slice is necessary because the last syllable of the root changes
+        formalForm = root.slice(0,-1)+"합니다"; } 
+    else if (rootEnd == "르") {
+        formalForm = root.slice(0,-1)+"릅니다"; } 
+    else if (rootEndCodeFromZ % 28 == 0) {     // most vowel-final roots
+        // add 4 to the root end code to get the corresponding n-batchim syllable block
+        formalForm = root.slice(0,-1) + String.fromCharCode(rootEndCodeFromZ+44032+17) + "니다";
+    }
+    
+    
 
 
     document.getElementById("rootDisplay").innerHTML = root;
     impersonal = root + "는다";
     simple = userInput.slice(-2,-1);
     formal = root + "습니다";
-    document.getElementById("basic3Display").innerHTML = impersonal + "&nbsp;&nbsp;&nbsp;" + simpleForm + "&nbsp;&nbsp;&nbsp;" + formal;
+    document.getElementById("basic3Display").innerHTML = impersonalForm + "&nbsp;&nbsp;&nbsp;" + simpleForm + "&nbsp;&nbsp;&nbsp;" + formalForm;
 }
 
+    
+    
+    
+// all verbs
+// |
+// |
+// |____root ends in vowel______others_________reg. verbs________________________________________
+// |                        |               |                |
+// |                        |               |                |______
+// |                        |               |
+// |                        |               |_____-reu verbs
+// |                        |               
+// |                        |___hada verbs___________________
+// |                        
+// |____root ends in cons____________________________________
+
+//                      gada        oda         swida       sseuda      jareuda     gongbuhada  boda    
+// root                 ga          o           swi         sseu        jareu       gongbuha    bo
+// rootEnd              ga          o           swi         sseu        reu         ha          bo
+// rootEndCodeFromZ     0           6692        5740        6384        3444        10584       4340
+// rootEndCodeFromZ%28  0           0           0           0           0           0           0
+// consVowelCode        0           239         205         228         123         378         155
+// vowelCode            0           8           16          18          18          0           8
+    
 </script>
 
 <body>
