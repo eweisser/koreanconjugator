@@ -9,10 +9,13 @@
 display: block;
 position: relative;
 background-color: #EEFFFF;
-font-size: 36pt;
+font-size: 16pt;
 left: 20px;
 width: 80%;
-line-height: 10px;
+}
+    
+#rootdisplay {
+display: none;        
 }
 
 </style>
@@ -48,6 +51,9 @@ function doOnEnter() {
     // consVowelCode is a number that represents the initial consonant and vowel part of a syllable block, ignoring any batchim. So 가, 갑, 갉, 갛 all have the same number, 0, representing 가.
     consVowelCode = Math.floor(rootEndCodeFromZ/28);
     vowelCode = consVowelCode % 21;
+    var rootPenult = root.slice(-2,-1);
+    var penultVowelCode = Math.floor( (rootPenult.charCodeAt() - 44032)/28 ) % 21
+    
     // 0: 가, 1: 개, 2: 갸, 3: 걔, 4: 거, 5: 게...20: 기
     // 21: 까, 22: 깨...41: 끼
     // 42: 나...62: 니
@@ -72,18 +78,28 @@ function doOnEnter() {
     // 10 waeda (DNE)
     // 11 괴다: 괘...되다: 돼      compoundify
     // 12 yoda (DNE)
-    // 13 나누다: 나누어...주다: 주어...지우다: 지워...싸우다: 싸워    add -eo / compoundify********
+    // 13 나누다: 나누어...주다: 주어...지우다: 지워...싸우다: 싸워    add -eo / compoundify *complicated
     // 14 woda (DNE)
     // 15 꿰다: 꿰어                       add -eo
     // 16 쉬다: 쉬어...바뀌다: 바뀌어        add -eo
     // 17 yuda (DNE)
-    // 18 잠그다: 잠가...쓰다: 써          change entirely********************
+    // 18 잠그다: 잠가...쓰다: 써          change entirely
     // 19 띄다: 띄어                      add -eo
     // 20 달리다: 달려...던지다: 던져        compoundify
-    if (vowelCode % 21 == 0 || vowelCode % 21 == 2 || vowelCode % 21 == 8) {
-        harmonyVowel = "a" }
-    else {
-        harmonyVowel = "eo" }
+    
+    
+    if (vowelCode == 0 || vowelCode == 2 || vowelCode == 8) {    // if the last syllable of the root contains a, ya, or o, the harmony vowel is 'a' (e.g. salda, dolda)
+        harmonyVowel = "a"; }
+    else {  // the last syllable of the root doesn't have a, ya, or o...
+        if (vowelCode == 18) {  // if the last syllable of the root contains 'eu'...
+            if (penultVowelCode == 0 || vowelCode == 2 || penultVowelCode == 8) {
+                harmonyVowel = "a"; }   // if the penultimate syllable of the root contains 'a', 'ya', or 'o', the harmony vowel is 'a' (e.g. jamgeuda, dareuda)
+            else {
+                harmonyVowel = "eo"; } // if the penultimate syllable of the root doesn't contain 'a', 'ya', or 'o', or the root is only one syllable, the harmony vowel is 'eo' (e.g. bureuda, keuda)
+        }
+        else {   // if the last syllable of the root contains anything other than 'a', 'ya', 'o', and 'eu'...
+            harmonyVowel = "eo"; }
+    }
 
     switch(rootEndCodeFromZ % 28) {  // possible irregulars: d, b, s, h
         case 0: // case 0 is vowel-final. Watch out for "reu" and "hada" verbs
@@ -102,11 +118,9 @@ function doOnEnter() {
     }
 
     if (harmonyVowel == "a") {
-        simpleConjSyllable = "아";
-    }
+        simpleConjSyllable = "아"; }
     else {
-        simpleConjSyllable = "어";
-    }
+        simpleConjSyllable = "어"; }
     
     
     // for impersonal form:
@@ -124,6 +138,8 @@ function doOnEnter() {
         impersonalForm = root.slice(0,-1) + String.fromCharCode(rootEndCodeFromZ+44032+4) + "다";
     }
     
+    impersonalForm = impersonalForm + " (v.) / " + userInput + " (adj.)";
+    
     
     
     // for simple form:
@@ -131,9 +147,7 @@ function doOnEnter() {
     if (batchimSituation == "regular") {
         simpleForm = root+simpleConjSyllable; }
     else if (rootEnd == "하") { // taking root.slice is necessary because the last syllable of the root changes
-        simpleForm = root.slice(0,-1)+"해"; } 
-    else if (rootEnd == "르") {
-        simpleForm = "N/A"; }
+        simpleForm = root.slice(0,-1)+"해"; }
     else if (rootEndCodeFromZ % 28 == 0) {     // most vowel-final roots
         // no verbs with vowelCode = 2, 3, 7, 9, 10, 12, 14, or 17 exist
         if (vowelCode == 0 || vowelCode == 1 || vowelCode == 5) {       // -ada, -aeda, -eda
@@ -146,6 +160,16 @@ function doOnEnter() {
             simpleForm = root.slice(0,-1)+String.fromCharCode(rootEndCodeFromZ+44032-28); }
         if (vowelCode == 20) {  // -ida
             simpleForm = root.slice(0,-1)+String.fromCharCode(rootEndCodeFromZ+44032-28*14); }
+        if (vowelCode == 13) {  // -uda
+            simpleForm = root+"어 / "+root.slice(0,-1)+String.fromCharCode(rootEndCodeFromZ+44032+28); }
+        if (vowelCode == 18) {  // -euda
+            if ( penultVowelCode == 0 || penultVowelCode == 8 ) {   // if the second-to-last syllable of the root contains "a" or "o"...
+                simpleForm = root.slice(0,-1)+String.fromCharCode(rootEndCodeFromZ+44032-28*18); }  // make "simpleForm" the second-to-last syllable, plus [C]a-
+            else {
+                simpleForm = root.slice(0,-1)+String.fromCharCode(rootEndCodeFromZ+44032-28*14); }  // make "simpleForm" the second-to-last syllable, plus [C]eo-
+            if (rootEnd == "르") {
+                simpleForm = String.fromCharCode( rootPenult.charCodeAt()+8 ) + simpleForm.slice(-1); }
+        }
     }
     
     
@@ -174,7 +198,7 @@ function doOnEnter() {
     impersonal = root + "는다";
     simple = userInput.slice(-2,-1);
     formal = root + "습니다";
-    document.getElementById("basic3Display").innerHTML = impersonalForm + "&nbsp;&nbsp;&nbsp;" + simpleForm + "&nbsp;&nbsp;&nbsp;" + formalForm;
+    document.getElementById("basic3Display").innerHTML = impersonalForm + "<br>" + simpleForm + "<br>" + formalForm;
 }
 
     
@@ -200,6 +224,20 @@ function doOnEnter() {
 // rootEndCodeFromZ%28  0           0           0           0           0           0           0
 // consVowelCode        0           239         205         228         123         378         155
 // vowelCode            0           8           16          18          18          0           8
+// rootPenult           --          --          --          --          ja          bu          --
+// penultVowelCode
+    
+    
+    
+// 꾸다: 꾸어 409k, 꿔 1.6M
+// 누다: 누어 384k, 눠 428k
+// 두다: 두어 7.3M, 둬 2.18M
+// 쑤다: 쑤어 228k, 쒀 1M
+// 주다: 주어요 702k, 줘요 13.4M
+// 여쭈다: 여쭈어 817k, 여쭤 4.98M
+// 추다: 추어 1M, 춰 1.38M
+// 지우다: 지우어 2.5k, 지워 6.7M
+// 싸우다: 싸우어 9.25k, 싸워 6.4M
     
 </script>
 
